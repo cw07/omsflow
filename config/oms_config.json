@@ -1,0 +1,51 @@
+{
+    "account": "TRADING_ACCOUNT_001",
+    "sql": {
+        "connection_string": "mssql+asyncpg://user:password@localhost:1433/orders_db"
+    },
+    "redis": {
+        "host": "localhost",
+        "port": 6379,
+        "stream_key": "orders:stream"
+    },
+    "phoenix": {
+        "sender_comp_id": "OMSFLOW",
+        "target_comp_id": "PHOENIX",
+        "fix_config_path": "config/phoenix.cfg",
+        "account": "PHOENIX_ACCOUNT_001"
+    },
+    "validation": {
+        "max_price_deviation": 0.05,
+        "max_position_value": 1000000.0
+    },
+    "broker_refdata": {
+        "SecurityType": {
+            "EQUITY": "CS",
+            "FUTURE": "FUT",
+            "OPTION": "OPT",
+            "FOREX": "CURR"
+        },
+        "OrderType": {
+            "MARKET": "2",
+            "LIMIT": "2",
+            "TWAP": "U",
+            "VWAP": "V"
+        },
+        "TimeInForce": {
+            "DAY": "0",
+            "GTC": "1",
+            "IOC": "3",
+            "FOK": "4"
+        }
+    },
+    "monitoring": {
+        "polling_interval": {
+            "market": 5,
+            "limit": 5,
+            "twap": 300,
+            "vwap": 300
+        },
+        "max_retries": 3,
+        "retry_delay": 5
+    }
+} 
