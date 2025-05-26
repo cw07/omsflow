@@ -1,16 +1,14 @@
+import logging
 import asyncio
-from datetime import datetime, timedelta
+import datetime as dt
 from typing import Any, Dict, List, Optional, Set
 
 from prometheus_client import Counter, Gauge, Histogram
-from structlog import get_logger
 
-from omsflow.core.models import Order, OrderStatus, OrderType
-from omsflow.models.order import StatusMapper
-from omsflow.execution.broker import BrokerInterface
+from omsflow.models.order import Order, OrderStatus, OrderType
+from omsflow.execution.base import ExecutionInterface
 
-
-logger = get_logger()
+_log = logging.getLogger(__name__)
 
 # Prometheus metrics
 ORDER_PROCESSING_TIME = Histogram(
@@ -32,16 +30,14 @@ ORDER_ERRORS = Counter(
 
 class OrderLifecycleManager:
     """Manages the lifecycle of orders including monitoring and status updates."""
-    
+
     def __init__(
-        self,
-        broker: BrokerInterface,
-        account: str,
-        max_retries: int = 3,
-        retry_delay: int = 5
+            self,
+            exec_system: ExecutionInterface,
+            max_retries: int = 3,
+            retry_delay: int = 5
     ):
-        self.broker = broker
-        self.account = account
+        self.exec_system = exec_system
         self.max_retries = max_retries
         self.retry_delay = retry_delay
         self.active_orders: Dict[str, Order] = {}
@@ -60,16 +56,15 @@ class OrderLifecycleManager:
         for task in self._monitoring_tasks:
             task.cancel()
         await asyncio.gather(*self._monitoring_tasks, return_exceptions=True)
-        self._monitoring_tasks.clear()
+        self._monitoring_tasks.clean()
 
     async def _monitor_order(self, order: Order) -> None:
         """Monitor a single order's status."""
         retry_count = 0
-        last_check = datetime.utcnow()
+        last_check = dt.datetime.now()
 
         while True:
             try:
-                # Determine polling interval based on order type
                 if order.order_type in [OrderType.TWAP, OrderType.VWAP]:
                     interval = 300  # 5 minutes for TWAP/VWAP
                 else:
@@ -79,19 +74,14 @@ class OrderLifecycleManager:
                 await asyncio.sleep(interval)
 
                 # Check order status
-                result = await self.broker.get_order_status(
-                    str(order.order_id),
-                    self.account
-                )
+                result = await self.exec_system.get_order_status(str(order.client_order_id))
 
                 if not result.success:
                     ORDER_ERRORS.labels(error_type="status_check_failed").inc()
                     retry_count += 1
                     if retry_count >= self.max_retries:
-                        logger.error(
+                        _log.error(
                             "order_status_check_failed",
-                            order_id=str(order.order_id),
-                            error=result.error_message
                         )
                         break
                     continue
@@ -109,22 +99,18 @@ class OrderLifecycleManager:
                     ORDER_STATUS.labels(status=internal_status.value).inc()
 
                 # Record processing time
-                processing_time = (datetime.utcnow() - last_check).total_seconds()
+                processing_time = (dt.datetime.now() - last_check).total_seconds()
                 ORDER_PROCESSING_TIME.labels(
                     order_type=order.order_type,
                     status=order.status.value
                 ).observe(processing_time)
 
-                last_check = datetime.utcnow()
+                last_check = dt.datetime.now()
 
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(
-                    "order_monitoring_error",
-                    order_id=str(order.order_id),
-                    error=str(e)
-                )
+                _log.error("order_monitoring_error")
                 ORDER_ERRORS.labels(error_type="monitoring_error").inc()
                 break
 
@@ -132,7 +118,7 @@ class OrderLifecycleManager:
         """Add a new order to monitoring."""
         self.active_orders[str(order.order_id)] = order
         ORDER_STATUS.labels(status=order.status).inc()
-        
+
         if order.status in [OrderStatus.SUBMITTED, OrderStatus.PARTIALLY_FILLED]:
             task = asyncio.create_task(self._monitor_order(order))
             self._monitoring_tasks.add(task)
@@ -146,10 +132,10 @@ class OrderLifecycleManager:
             del self.active_orders[order_id]
 
     async def update_order_status(
-        self,
-        order_id: str,
-        new_status: OrderStatus,
-        execution_id: Optional[str] = None
+            self,
+            order_id: str,
+            new_status: OrderStatus,
+            execution_id: Optional[str] = None
     ) -> None:
         """Update the status of a monitored order."""
         if order_id in self.active_orders:
@@ -158,4 +144,4 @@ class OrderLifecycleManager:
             order.status = new_status
             if execution_id:
                 order.metadata["execution_id"] = execution_id
-            ORDER_STATUS.labels(status=new_status).inc() 
+            ORDER_STATUS.labels(status=new_status).inc()

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
-from omsflow.core.models import Order, OrderValidationResult
+from omsflow.models.order import Order, OrderValidationResult
 
 
 class ValidationRule(ABC):

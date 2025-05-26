@@ -1,10 +1,9 @@
-from typing import Dict, ClassVar, Type
+from enum import Enum
+from pydantic import BaseModel, Field
+from typing import Dict, Optional, Any
 
 
-class AnotherOrderStatus:
-    Accepted = 'Accepted'
-
-class PhxOrderStatus:
+class PhxOrderStatus(str, Enum):
     ACCEPTED = 'Accepted'
     CALCULATED = 'Calculated'
     CANCELED = 'Canceled'
@@ -21,51 +20,40 @@ class PhxOrderStatus:
     SUSPENDED = 'Suspended'
     Unknown = 'Unknown'
 
+    @property
+    def is_success(self) -> bool:
+        success_statuses = [self.FILLED]
+        return self in success_statuses
 
-class DefaultOrderStatus:
-    """Default order status representation."""
-    ACCEPTED = 'Accepted'
-    CALCULATED = 'Calculated'
-    CANCELED = 'Canceled'
-    DONE_FOR_DAY = 'DoneForDay'
-    EXPIRED = 'Expired'
-    FILLED = 'Filled'
-    PARTIAL = 'Partial'
-    PENDING_CANCEL = 'PendingCancel'
-    PENDING_NEW = 'PendingNew'
-    PENDING_REPLACE = 'PendingReplace'
-    REJECTED = 'Rejected'
-    REPLACED = 'Replaced'
-    STOPPED = 'Stopped'
+    @property
+    def is_canceled(self) -> bool:
+        cancel_statuses = [self.CANCELED]
+        return self in cancel_statuses
 
-    # System-specific status mappings
-    _system_mappings: ClassVar[Dict[str, Type]] = {
-        "phoenix": PhxOrderStatus,
-    }
-
-    def __new__(cls, system: str) -> Type:
-        if system == "phoenix":
-            system_status = cls._system_mappings["phoenix"]
-            # Create a new class with system-specific constants
-            class DynamicOrderStatus:
-                ACCEPTED = getattr(system_status, "ACCEPTED", cls.ACCEPTED)
-                CANCELED = getattr(system_status, "CANCELED", cls.CANCELED)
-                FILLED = getattr(system_status, "FILLED", cls.FILLED)
-                PARTIAL = getattr(system_status, "PARTIAL", cls.PARTIAL)
-                PENDING_CANCEL = getattr(system_status, "PENDING_CANCEL", cls.PENDING_CANCEL)
-                PENDING_NEW = getattr(system_status, "PENDING_NEW", cls.PENDING_NEW)
-                REJECTED = getattr(system_status, "REJECTED", cls.REJECTED)
-            return DynamicOrderStatus
-        else:
-            raise NotImplementedError()
+    @property
+    def is_partial(self) -> bool:
+        partial_statuses = [self.PARTIAL]
+        return self in partial_statuses
 
 
+class PhxIdType(str, Enum):
+    CURRENCY_PAIR = "CURRENCY_PAIR"
+    BBG_TICKER = "BBG_TICKER"
+    BAM_SYMBOL = "BAM_SYMBOL"
 
 
-if __name__ == "__main__":
-    order_system = "phoenix"
-    if order_system == "phoenix":
-        OrderStatus = DefaultOrderStatus("phoenix")
+class PhxExecutionStyle(str, Enum):
+    AUTO_MARKET = 'AUTO_MARKET'
+    FIVE_MINUTES_TWAP = 'FIVE_MINUTES_TWAP'
+    FIVE_MINUTES_IS = 'FIVE_MINUTES_IS'
+    TEN_MINUTES_IS = 'TEN_MINUTES_IS'
+    IS_NEUTRAL = 'IS_NEUTRAL'
+    LIMIT_GS = 'LIMIT_GS'
 
 
-
+class PhxSecurityType(str, Enum):
+    FX_SPOT = "FX_SPOT"
+    FUT = "FUT"
+    FX_FWD = "FX_FWD"
+    FX_SWAP = "FX_SWAP"
+    VAR_VOL_SWAP = "VAR_VOL_SWAP"

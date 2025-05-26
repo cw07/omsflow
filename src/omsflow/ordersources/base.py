@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import AsyncIterator, Optional
 
-from omsflow.core.models import Order
+from omsflow.models.order import Order
 
 
 class OrderSource(ABC):
