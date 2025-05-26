@@ -5,7 +5,7 @@ from omsflow.core.models import Order
 
 
 class OrderSource(ABC):
-    """Abstract base class for order sources."""
+    """Abstract base class for order ordersources."""
     
     @abstractmethod
     async def connect(self) -> None:
@@ -34,7 +34,7 @@ class OrderSource(ABC):
 
 
 class SQLOrderSource(OrderSource):
-    """Base class for SQL-based order sources."""
+    """Base class for SQL-based order ordersources."""
     
     def __init__(self, connection_string: str):
         self.connection_string = connection_string
@@ -47,7 +47,7 @@ class SQLOrderSource(OrderSource):
 
 
 class RedisOrderSource(OrderSource):
-    """Base class for Redis-based order sources."""
+    """Base class for Redis-based order ordersources."""
     
     def __init__(self, host: str, port: int, stream_key: str):
         self.host = host

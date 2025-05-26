@@ -12,8 +12,9 @@ from structlog.stdlib import ProcessorFormatter
 
 from omsflow.core.oms import OrderManagementSystem
 from omsflow.execution.broker import PhoenixBroker
-from omsflow.sources.base import SQLOrderSource, RedisOrderSource
+from omsflow.ordersources.base import SQLOrderSource, RedisOrderSource
 from omsflow.validation.engine import ValidationEngine, PriceValidationRule, PositionLimitRule
+from omsflow.models.order import StatusMapper
 
 
 def setup_logging(log_level: str = "INFO") -> None:
@@ -76,6 +77,10 @@ async def main() -> None:
         # Load configuration
         config = load_config(args.config)
         logger.info("configuration_loaded", config_path=args.config)
+
+        # Initialize status mapper for the selected broker
+        StatusMapper.initialize(args.broker)
+        logger.info("status_mapper_initialized", broker=args.broker)
 
         # Parse time window
         start_time = datetime.strptime(args.start_time, "%Y-%m-%d %H:%M:%S") if args.start_time else None

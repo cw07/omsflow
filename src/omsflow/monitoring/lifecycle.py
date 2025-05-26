@@ -6,6 +6,7 @@ from prometheus_client import Counter, Gauge, Histogram
 from structlog import get_logger
 
 from omsflow.core.models import Order, OrderStatus, OrderType
+from omsflow.models.order import StatusMapper
 from omsflow.execution.broker import BrokerInterface
 
 
@@ -95,20 +96,23 @@ class OrderLifecycleManager:
                         break
                     continue
 
+                # Convert external status to internal status
+                internal_status = StatusMapper.to_internal_status(result.status)
+
                 # Update order status
                 if result.execution_id:
                     order.status = OrderStatus.FILLED
                     ORDER_STATUS.labels(status="filled").inc()
                     break
-                elif order.status != result.status:
-                    order.status = result.status
-                    ORDER_STATUS.labels(status=result.status).inc()
+                elif order.status != internal_status:
+                    order.status = internal_status
+                    ORDER_STATUS.labels(status=internal_status.value).inc()
 
                 # Record processing time
                 processing_time = (datetime.utcnow() - last_check).total_seconds()
                 ORDER_PROCESSING_TIME.labels(
                     order_type=order.order_type,
-                    status=order.status
+                    status=order.status.value
                 ).observe(processing_time)
 
                 last_check = datetime.utcnow()

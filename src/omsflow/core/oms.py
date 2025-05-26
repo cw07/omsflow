@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional, Type
 from omsflow.core.models import Order, OrderExecutionResult, OrderValidationResult
 from omsflow.execution.broker import BrokerInterface
 from omsflow.monitoring.lifecycle import OrderLifecycleManager
-from omsflow.sources.base import OrderSource
+from omsflow.ordersources.base import OrderSource
 from omsflow.validation.engine import ValidationEngine
 
 
