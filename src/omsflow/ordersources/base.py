@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import AsyncIterator, Optional
+from typing import AsyncIterator, Optional, AsyncIterable
 
 from omsflow.models.order import Order
 
@@ -23,39 +23,12 @@ class OrderSource(ABC):
         pass
 
     @abstractmethod
-    async def stream_orders(self) -> AsyncIterator[Order]:
-        """Stream orders from the source."""
+    @property
+    def new_orders(self) -> AsyncIterable[Order]:
+        """Property that returns an async iterable of new orders."""
         pass
 
     @abstractmethod
     async def acknowledge_order(self, order_id: str) -> bool:
         """Acknowledge successful processing of an order."""
         pass
-
-
-class SQLOrderSource(OrderSource):
-    """Base class for SQL-based order ordersources."""
-    
-    def __init__(self, connection_string: str):
-        self.connection_string = connection_string
-        self._connection = None
-
-    @abstractmethod
-    async def execute_query(self, query: str, params: dict) -> list[dict]:
-        """Execute a SQL query and return results."""
-        pass
-
-
-class RedisOrderSource(OrderSource):
-    """Base class for Redis-based order ordersources."""
-    
-    def __init__(self, host: str, port: int, stream_key: str):
-        self.host = host
-        self.port = port
-        self.stream_key = stream_key
-        self._client = None
-
-    @abstractmethod
-    async def add_to_dead_letter_queue(self, order: Order, error: str) -> None:
-        """Add a failed order to the dead letter queue."""
-        pass 

@@ -32,6 +32,7 @@ class OrderManagementSystem:
         self._running = True
 
         # Connect to order source and broker
+
         await self.order_source.connect()
         await self.exec_client.connect()
 
@@ -66,7 +67,7 @@ class OrderManagementSystem:
     async def _process_orders(self) -> None:
         """Process incoming orders from the order source."""
         try:
-            async for order in self.order_source.stream_orders():
+            async for order in self.order_source.new_orders:
                 try:
                     # Validate order
                     validation_result = await self.validation_engine.validate_order(order)
